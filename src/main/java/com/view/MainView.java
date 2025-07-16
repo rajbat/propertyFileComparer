@@ -7,8 +7,6 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.*;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -29,6 +27,8 @@ public class MainView {
 
     private final ComparisonTableView tableView = new ComparisonTableView();
     private boolean showOnlyMissing = false;
+    
+    private FileDiffFilter fileDiffFilter = FileDiffFilter.ALL;
 
     public MainView(Stage stage) {
         Label title = new Label("Property File Comparator");
@@ -38,22 +38,41 @@ public class MainView {
         HBox fileRow2 = createFileRow(stage, pathField2, props2, false);
 
         Button compareBtn = new Button("Compare");
-        Button exportBtn = new Button("Export");
         Button toggleBtn = new Button("Show Missing Only");
+        Button fileFilterBtn = new Button("All Differences");
+        Button exportBtn = new Button("Export");
 
         spinner.setVisible(false);
         spinner.setMaxSize(25, 25);
 
-        HBox controlRow = new HBox(10, compareBtn, toggleBtn, exportBtn, spinner);
+        HBox controlRow = new HBox(10, compareBtn, toggleBtn, fileFilterBtn, exportBtn, spinner);
         controlRow.setAlignment(Pos.CENTER_LEFT);
 
         compareBtn.setOnAction(e -> runComparisonAsync());
 
-        exportBtn.setOnAction(e -> tableView.saveDifferences(stage, showOnlyMissing));
+        exportBtn.setOnAction(e -> tableView.saveDifferences(stage, showOnlyMissing, fileDiffFilter));
 
         toggleBtn.setOnAction(e -> {
             showOnlyMissing = !showOnlyMissing;
             toggleBtn.setText(showOnlyMissing ? "Show All Differences" : "Show Missing Only");
+            runComparisonAsync();
+        });
+
+        fileFilterBtn.setOnAction(e -> {
+            switch (fileDiffFilter) {
+                case ALL -> {
+                    fileDiffFilter = FileDiffFilter.FILE1_ONLY;
+                    fileFilterBtn.setText("Only File 1 Differences");
+                }
+                case FILE1_ONLY -> {
+                    fileDiffFilter = FileDiffFilter.FILE2_ONLY;
+                    fileFilterBtn.setText("Only File 2 Differences");
+                }
+                case FILE2_ONLY -> {
+                    fileDiffFilter = FileDiffFilter.ALL;
+                    fileFilterBtn.setText("All Differences");
+                }
+            }
             runComparisonAsync();
         });
 
@@ -65,34 +84,10 @@ public class MainView {
     private HBox createFileRow(Stage stage, TextField pathField, Properties props, boolean isFile1) {
         pathField.setPromptText("Select File " + (isFile1 ? "1" : "2"));
         pathField.setPrefWidth(350);
-        pathField.setEditable(true);
-
-//        Image fileIconImage = loadIcon("/icons/file.png");
-//        Image reloadIconImage = loadIcon("/icons/reload.png");
-
-        Button browseBtn = new Button();
         pathField.setEditable(false);
 
-//        if (fileIconImage != null) {
-//            ImageView fileIcon = new ImageView(fileIconImage);
-//            fileIcon.setFitWidth(18);
-//            fileIcon.setFitHeight(18);
-//            browseBtn.setGraphic(fileIcon);
-//        } else {
-//            browseBtn.setText("📂");
-//        }
-
-        Button reloadBtn = new Button();
-        pathField.setEditable(false);
-
-//        if (reloadIconImage != null) {
-//            ImageView reloadIcon = new ImageView(reloadIconImage);
-//            reloadIcon.setFitWidth(18);
-//            reloadIcon.setFitHeight(18);
-//            reloadBtn.setGraphic(reloadIcon);
-//        } else {
-//            reloadBtn.setText("↻");
-//        }
+        Button browseBtn = new Button("📂");
+        Button reloadBtn = new Button("↻");
 
         browseBtn.setOnAction(e -> {
             FileChooser chooser = new FileChooser();
@@ -144,6 +139,9 @@ public class MainView {
                     if (showOnlyMissing && !isMissing) continue;
                     if (!showOnlyMissing && !isDifferent) continue;
 
+                    if (fileDiffFilter == FileDiffFilter.FILE1_ONLY && !(val2 == null)) continue;
+                    if (fileDiffFilter == FileDiffFilter.FILE2_ONLY && !(val1 == null)) continue;
+
                     rows.add(new ComparisonRow(
                             key,
                             val1 != null ? val1 : "(missing)",
@@ -188,15 +186,6 @@ public class MainView {
         alert.setHeaderText(null);
         alert.setContentText(msg);
         alert.showAndWait();
-    }
-
-    private Image loadIcon(String path) {
-        try {
-            return new Image(Objects.requireNonNull(getClass().getResource(path)).toExternalForm());
-        } catch (Exception e) {
-            System.err.println("Warning: Could not load icon at " + path);
-            return null;
-        }
     }
 
     public Node getRoot() {

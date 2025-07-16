@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Objects;
 
 public class ComparisonTableView {
+
     private final TableView<ComparisonRow> tableView = new TableView<>();
     private final ObservableList<ComparisonRow> fullData = FXCollections.observableArrayList();
     private final FilteredList<ComparisonRow> filteredData = new FilteredList<>(fullData, p -> true);
@@ -69,9 +70,9 @@ public class ComparisonTableView {
         searchField.textProperty().addListener((obs, oldVal, newVal) -> {
             String lower = newVal.toLowerCase();
             filteredData.setPredicate(row ->
-                row.getKey().toLowerCase().contains(lower)
-                || row.getValue1().toLowerCase().contains(lower)
-                || row.getValue2().toLowerCase().contains(lower)
+                    row.getKey().toLowerCase().contains(lower)
+                            || row.getValue1().toLowerCase().contains(lower)
+                            || row.getValue2().toLowerCase().contains(lower)
             );
         });
     }
@@ -92,7 +93,7 @@ public class ComparisonTableView {
         return container;
     }
 
-    public void saveDifferences(Stage stage, boolean showOnlyMissing) {
+    public void saveDifferences(Stage stage, boolean showOnlyMissing, FileDiffFilter fileDiffFilter) {
         if (filteredData.isEmpty()) {
             showAlert("No Data to Export", "Nothing to export based on current filter.");
             return;
@@ -105,7 +106,21 @@ public class ComparisonTableView {
 
         if (file != null) {
             try (PrintWriter pw = new PrintWriter(file)) {
+                pw.printf("# Filter: %s | Missing Only: %s%n", fileDiffFilter, showOnlyMissing);
+                pw.println("# Format: key = file1_value | file2_value");
+
                 for (ComparisonRow row : filteredData) {
+                    boolean isMissing = "(missing)".equals(row.getValue1()) || "(missing)".equals(row.getValue2());
+
+                    if (showOnlyMissing && !isMissing)
+                        continue;
+
+                    if (fileDiffFilter == FileDiffFilter.FILE1_ONLY && !"(missing)".equals(row.getValue2()))
+                        continue;
+
+                    if (fileDiffFilter == FileDiffFilter.FILE2_ONLY && !"(missing)".equals(row.getValue1()))
+                        continue;
+
                     pw.printf("%s = %s | %s%n", row.getKey(), row.getValue1(), row.getValue2());
                 }
             } catch (Exception e) {
