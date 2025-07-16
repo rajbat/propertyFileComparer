@@ -6,7 +6,10 @@ JavaFX-based property file comparer with search, diff, and export.
 - 📂 Load two `.properties` files
 - 🧪 Show differences side-by-side
 - 🔍 Highlight missing or mismatched keys
-- 🎚 Toggle between **all differences** and **missing-only**
+- 🎚 Toggle between:
+  - **All differences**
+  - **Only missing keys**
+  - **File1-only** / **File2-only** difference view
 - 🔎 Search support within the table
 - 💾 Export comparison result to file
 - 🔁 Reload files easily
@@ -27,4 +30,4 @@ JavaFX-based property file comparer with search, diff, and export.
 ### 1. Build
 
 ```bash
-mvn clean package
+mvn clean package javafx:run
